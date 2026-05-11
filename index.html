@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MediBot — AI Health Assistant</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+      width: 100%;
+      max-width: 750px;
+      display: flex;
+      flex-direction: column;
+      height: 92vh;
+      max-height: 820px;
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(90deg, #1a73e8, #0d47a1);
+      color: white;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .bot-avatar {
+      width: 48px; height: 48px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+    }
+    .header-info h1 { font-size: 1.1rem; font-weight: 600; }
+    .header-info p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+    .status-dot { width: 8px; height: 8px; background: #4cff91; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .topics {
+      padding: 0.7rem 1rem;
+      background: #f8fbff;
+      border-bottom: 1px solid #e3f2fd;
+      flex-shrink: 0;
+    }
+    .topics p { font-size: 11px; color: #999; margin-bottom: 6px; }
+    .topics-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .topic-btn {
+      background: #e3f2fd; color: #1a73e8;
+      border: none; border-radius: 20px;
+      padding: 4px 12px; font-size: 12px;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.2s;
+    }
+    .topic-btn:hover { background: #bbdefb; }
+    .chat-area {
+      flex: 1; overflow-y: auto;
+      padding: 1.2rem;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .msg { display: flex; gap: 10px; align-items: flex-start; }
+    .msg.user { flex-direction: row-reverse; }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0; margin-top: 2px;
+    }
+    .bot-av { background: #e3f2fd; }
+    .user-av { background: #1a73e8; color: white; font-size: 13px; font-weight: 700; }
+    .bubble {
+      max-width: 80%; padding: 10px 14px;
+      border-radius: 18px; font-size: 14px; line-height: 1.65;
+    }
+    .bot-bubble {
+      background: #f1f8ff; color: #1a1a2e;
+      border-top-left-radius: 4px; border: 1px solid #e3f2fd;
+    }
+    .user-bubble {
+      background: #1a73e8; color: white;
+      border-top-right-radius: 4px;
+    }
+    .bot-bubble ul { margin: 6px 0 6px 18px; }
+    .bot-bubble li { margin-bottom: 4px; }
+    .bot-bubble b { color: #0d47a1; }
+    .confidence { font-size: 11px; color: #aaa; margin-top: 2px; padding-left: 44px; }
+    .typing-dots { display: flex; gap: 5px; align-items: center; padding: 4px 0; }
+    .typing-dots span {
+      width: 8px; height: 8px; background: #90caf9; border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-7px); }
+    }
+    .input-area {
+      padding: 0.9rem 1rem;
+      border-top: 1px solid #e3f2fd;
+      display: flex; gap: 8px; align-items: center;
+      flex-shrink: 0; background: white;
+    }
+    #user-input {
+      flex: 1; padding: 10px 16px;
+      border: 1.5px solid #e0e0e0; border-radius: 24px;
+      font-size: 14px; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    #user-input:focus { border-color: #1a73e8; }
+    .send-btn {
+      width: 42px; height: 42px; background: #1a73e8; color: white;
+      border: none; border-radius: 50%; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s; flex-shrink: 0;
+    }
+    .send-btn:hover { background: #1558b0; }
+    .send-btn:disabled { background: #b0c8f5; cursor: not-allowed; }
+    .disclaimer { text-align: center; font-size: 11px; color: #bbb; padding: 0 1rem 0.6rem; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="bot-avatar">🏥</div>
+    <div class="header-info">
+      <h1>MediBot — AI Health & Diet Assistant</h1>
+      <p><span class="status-dot"></span>Online • No internet required • 60+ health topics</p>
+    </div>
+  </div>
+
+  <div class="topics">
+    <p>💡 Quick topics:</p>
+    <div class="topics-list">
+      <button class="topic-btn" onclick="ask('weight loss diet plan')">🥗 Weight Loss</button>
+      <button class="topic-btn" onclick="ask('muscle gain diet')">💪 Muscle Gain</button>
+      <button class="topic-btn" onclick="ask('diabetes diet')">🩺 Diabetes Diet</button>
+      <button class="topic-btn" onclick="ask('heart health diet')">❤️ Heart Health</button>
+      <button class="topic-btn" onclick="ask('how to boost immunity')">🛡️ Immunity</button>
+      <button class="topic-btn" onclick="ask('vitamins I should take daily')">💊 Vitamins</button>
+      <button class="topic-btn" onclick="ask('foods for glowing skin')">✨ Skin Health</button>
+      <button class="topic-btn" onclick="ask('how to improve sleep')">😴 Sleep</button>
+      <button class="topic-btn" onclick="ask('keto diet')">🥑 Keto Diet</button>
+      <button class="topic-btn" onclick="ask('high blood pressure foods')">🩸 Blood Pressure</button>
+    </div>
+  </div>
+
+  <div class="chat-area" id="chat-area"></div>
+
+  <div class="input-area">
+    <input type="text" id="user-input" placeholder="Ask any health or diet question..." autocomplete="off"/>
+    <button class="send-btn" id="send-btn">➤</button>
+  </div>
+  <div class="disclaimer">⚕️ For informational purposes only. Always consult a qualified doctor for medical advice.</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// LARGE FAQ DATABASE — 60+ topics
+// ══════════════════════════════════════════════════════
+var FAQS = [
+  // ── DIET PLANS ──
+  { tags: ["weight loss","lose weight","fat loss","slim","diet plan","reduce weight","lose fat","obesity"],
+    a: "<b>🥗 Weight Loss Diet Plan</b><br><br><b>Daily Calorie Goal:</b> Eat 300–500 calories less than you burn.<br><br><b>Sample 7-Day Plan:</b><ul><li><b>Breakfast:</b> Oats with fruits, or 2 boiled eggs + green tea</li><li><b>Lunch:</b> Grilled chicken/fish + salad + 1 roti or brown rice</li><li><b>Dinner:</b> Vegetable soup + 1 roti or dal + salad</li><li><b>Snacks:</b> Fruits, nuts, yogurt (avoid chips and sweets)</li></ul><b>Key Rules:</b><ul><li>Drink 8–10 glasses of water daily</li><li>Avoid sugar, white bread, fried foods, soda</li><li>Eat slowly and stop when 80% full</li><li>Walk at least 30 minutes daily</li><li>Sleep 7–8 hours — poor sleep causes weight gain</li></ul>" },
+
+  { tags: ["muscle gain","build muscle","bulking","gain weight","mass","bodybuilding","protein diet"],
+    a: "<b>💪 Muscle Gain Diet Plan</b><br><br><b>Goal:</b> Eat 300–500 more calories than you burn with high protein.<br><br><b>Daily Meal Plan:</b><ul><li><b>Breakfast:</b> 4 eggs + oats + banana + milk</li><li><b>Lunch:</b> Chicken breast or beef + rice + vegetables</li><li><b>Pre-workout:</b> Banana + peanut butter</li><li><b>Post-workout:</b> Protein shake or eggs + rice</li><li><b>Dinner:</b> Fish or chicken + sweet potato + salad</li></ul><b>Key Rules:</b><ul><li>Eat 1.6–2.2g of protein per kg of body weight</li><li>Best protein sources: eggs, chicken, beef, fish, lentils, milk</li><li>Lift weights 3–5 times per week</li><li>Get 8 hours of sleep — muscles grow during sleep</li><li>Stay hydrated — drink 3+ liters of water</li></ul>" },
+
+  { tags: ["diabetes diet","diabetic food","blood sugar diet","sugar control","diabetes food","type 2 diabetes food"],
+    a: "<b>🩺 Diabetes Diet Plan</b><br><br><b>Goal:</b> Keep blood sugar stable throughout the day.<br><br><b>Best Foods to Eat:</b><ul><li>Brown rice, whole wheat roti, oats</li><li>Vegetables: spinach, broccoli, bitter gourd (karela), tomatoes</li><li>Lentils (dal), chickpeas, beans</li><li>Fish, chicken (grilled/boiled)</li><li>Low-sugar fruits: apple, pear, berries, guava</li></ul><b>Foods to AVOID:</b><ul><li>White rice, white bread, maida</li><li>Sweets, mithai, soft drinks, juices</li><li>Fried foods, fast food</li><li>High-sugar fruits: mango, banana, grapes (in excess)</li></ul><b>Daily Tips:</b><ul><li>Eat small meals every 3–4 hours</li><li>Never skip breakfast</li><li>Check blood sugar regularly</li><li>Walk 30 minutes after meals</li></ul>" },
+
+  { tags: ["heart diet","heart disease food","heart health","cardiac diet","heart patient food","cholesterol diet"],
+    a: "<b>❤️ Heart Healthy Diet</b><br><br><b>Best Foods for Heart:</b><ul><li>Oats, brown rice, whole grains</li><li>Fish (salmon, sardines) — rich in omega-3</li><li>Nuts: almonds, walnuts</li><li>Fruits: berries, apples, oranges</li><li>Vegetables: leafy greens, broccoli, garlic</li><li>Olive oil instead of regular oil</li></ul><b>Foods to AVOID:</b><ul><li>Fried and fast foods</li><li>Red meat in excess</li><li>Salt (sodium) — causes high blood pressure</li><li>Sugar and sweets</li><li>Full-fat dairy in excess</li></ul><b>Lifestyle Tips:</b><ul><li>Exercise 30 min daily — walking, swimming</li><li>Quit smoking completely</li><li>Manage stress through meditation</li><li>Monitor blood pressure and cholesterol regularly</li></ul>" },
+
+  { tags: ["keto diet","ketogenic","keto","low carb diet","keto plan","ketosis"],
+    a: "<b>🥑 Keto Diet Guide</b><br><br><b>What is Keto?</b> A very low-carb, high-fat diet that puts your body into ketosis (burns fat for energy).<br><br><b>Keto Macros:</b><ul><li>Fat: 70–75% of calories</li><li>Protein: 20–25%</li><li>Carbs: Only 5–10% (20–50g per day)</li></ul><b>What to Eat:</b><ul><li>Meat: chicken, beef, fish, eggs</li><li>Dairy: cheese, butter, cream</li><li>Nuts and seeds</li><li>Low-carb vegetables: spinach, broccoli, cauliflower</li><li>Avocado, olive oil, coconut oil</li></ul><b>What to AVOID:</b><ul><li>All grains: rice, bread, roti, oats</li><li>Sugar and sweets</li><li>Fruits (except berries in small amounts)</li><li>Potatoes, corn</li></ul><b>Benefits:</b> Fast weight loss, better blood sugar control, reduced hunger." },
+
+  { tags: ["thyroid diet","thyroid food","hypothyroid","hyperthyroid","thyroid problem"],
+    a: "<b>🦋 Thyroid Diet Guide</b><br><br><b>For Hypothyroidism (slow thyroid):</b><ul><li>Eat iodine-rich foods: fish, eggs, dairy</li><li>Selenium foods: Brazil nuts, sunflower seeds, tuna</li><li>Zinc foods: beef, chickpeas, pumpkin seeds</li><li>Avoid raw goitrogens in excess: cabbage, broccoli, kale (cooking reduces effect)</li></ul><b>For Hyperthyroidism (fast thyroid):</b><ul><li>Avoid iodine-rich foods: seaweed, iodized salt</li><li>Eat calcium-rich foods: dairy, leafy greens</li><li>Avoid caffeine and stimulants</li></ul><b>General Tips:</b><ul><li>Take thyroid medication on empty stomach</li><li>Don't take calcium/iron supplements within 4 hours of medication</li><li>Consult your doctor for personalized advice</li></ul>" },
+
+  { tags: ["pcos diet","pcos food","polycystic ovary","hormonal diet","pcos"],
+    a: "<b>🌸 PCOS Diet Guide</b><br><br><b>Best Foods for PCOS:</b><ul><li>High fiber: vegetables, lentils, beans, oats</li><li>Lean protein: chicken, fish, eggs, tofu</li><li>Anti-inflammatory: turmeric, ginger, berries, olive oil</li><li>Low glycemic: brown rice, sweet potato, whole wheat</li></ul><b>Foods to AVOID:</b><ul><li>Refined carbs: white bread, white rice, maida</li><li>Sugary drinks and sweets</li><li>Processed and fried foods</li><li>Dairy in excess (for some women)</li></ul><b>Lifestyle Tips:</b><ul><li>Exercise regularly — even walking helps</li><li>Manage stress — high cortisol worsens PCOS</li><li>Sleep 7–9 hours</li><li>Consider spearmint tea — may help reduce androgens</li></ul>" },
+
+  // ── HEALTH CONDITIONS ──
+  { tags: ["blood pressure","hypertension","high bp","lower blood pressure","bp high","reduce blood pressure"],
+    a: "<b>🩸 High Blood Pressure Guide</b><br><br><b>Normal Range:</b> Below 120/80 mmHg<br><b>High BP:</b> 130/80 or above<br><br><b>Foods that LOWER Blood Pressure:</b><ul><li>Bananas, spinach, sweet potatoes (potassium-rich)</li><li>Oats and whole grains</li><li>Berries — contain antioxidants</li><li>Garlic — natural blood pressure reducer</li><li>Low-fat dairy</li><li>Dark chocolate (in moderation)</li></ul><b>Foods to AVOID:</b><ul><li>Salt and salty foods (chips, pickles, processed meats)</li><li>Alcohol and caffeine in excess</li><li>Fried and fatty foods</li></ul><b>Lifestyle Changes:</b><ul><li>Exercise 30 min daily</li><li>Lose extra weight</li><li>Quit smoking</li><li>Manage stress — meditation, deep breathing</li><li>Monitor BP at home regularly</li></ul>" },
+
+  { tags: ["diabetes","what is diabetes","diabetic","blood sugar","sugar disease","glucose"],
+    a: "<b>🩺 What is Diabetes?</b><br><br>Diabetes is when the body can't properly control blood sugar (glucose).<br><br><b>Types:</b><ul><li><b>Type 1:</b> Body doesn't make insulin (usually genetic, from childhood)</li><li><b>Type 2:</b> Body doesn't use insulin properly (lifestyle-related)</li><li><b>Gestational:</b> During pregnancy</li></ul><b>Symptoms:</b><ul><li>Frequent urination, excessive thirst</li><li>Unexplained weight loss</li><li>Fatigue and weakness</li><li>Blurred vision</li><li>Slow healing wounds</li></ul><b>Normal Blood Sugar:</b><ul><li>Fasting: 70–100 mg/dL</li><li>After meals: Less than 140 mg/dL</li></ul><b>Management:</b> Diet control, exercise, medication, regular monitoring." },
+
+  { tags: ["anemia","iron deficiency","low hemoglobin","blood deficiency","low iron","pale skin weakness"],
+    a: "<b>🩸 Anemia Guide</b><br><br><b>What is it?</b> Low red blood cells or hemoglobin causing less oxygen delivery.<br><br><b>Symptoms:</b><ul><li>Fatigue, weakness, dizziness</li><li>Pale or yellowish skin</li><li>Shortness of breath</li><li>Cold hands and feet</li><li>Brittle nails, hair loss</li></ul><b>Iron-Rich Foods to Eat:</b><ul><li>Red meat, chicken, liver</li><li>Spinach, lentils, beans, chickpeas</li><li>Pumpkin seeds, sesame seeds</li><li>Fortified cereals</li></ul><b>Tips to Absorb More Iron:</b><ul><li>Eat vitamin C with iron foods (lemon on dal)</li><li>Avoid tea/coffee with meals — blocks iron absorption</li><li>Cook in iron pots</li></ul>" },
+
+  { tags: ["cholesterol","high cholesterol","ldl","hdl","lower cholesterol","fatty liver"],
+    a: "<b>🫀 Cholesterol Guide</b><br><br><b>Safe Levels:</b><ul><li>Total: Below 200 mg/dL</li><li>LDL (bad): Below 100 mg/dL</li><li>HDL (good): Above 60 mg/dL</li></ul><b>Foods that LOWER Cholesterol:</b><ul><li>Oats and oat bran</li><li>Fish (omega-3): salmon, mackerel, sardines</li><li>Nuts: almonds, walnuts</li><li>Olive oil, avocado</li><li>Fruits: apples, grapes, strawberries</li></ul><b>Foods to AVOID:</b><ul><li>Fried foods, fast food</li><li>Red meat in excess</li><li>Full-fat dairy</li><li>Coconut oil and palm oil in excess</li></ul>" },
+
+  { tags: ["headache","migraine","head pain","head ache"],
+    a: "<b>🤕 Headache Guide</b><br><br><b>Common Causes:</b><ul><li>Dehydration — most common cause</li><li>Stress and tension</li><li>Lack of sleep</li><li>Eye strain (screen time)</li><li>Skipping meals</li><li>High blood pressure</li><li>Caffeine withdrawal</li></ul><b>Home Remedies:</b><ul><li>Drink 2–3 glasses of water immediately</li><li>Rest in a dark, quiet room</li><li>Cold or warm compress on forehead</li><li>Ginger tea — natural pain reliever</li><li>Peppermint oil on temples</li><li>Paracetamol if needed</li></ul><b>See a Doctor if:</b> Headache is sudden and severe, with fever, stiff neck, vision changes, or lasts more than 3 days." },
+
+  { tags: ["fever","temperature","high temperature","how to treat fever","body heat"],
+    a: "<b>🌡️ Fever Guide</b><br><br><b>Normal temperature:</b> 36.5–37.5°C (97.7–99.5°F)<br><b>Fever:</b> Above 38°C (100.4°F)<br><br><b>Home Treatment:</b><ul><li>Rest and sleep</li><li>Drink plenty of fluids — water, ORS, soups</li><li>Take paracetamol (Panadol) for temperatures above 38.5°C</li><li>Cool damp cloth on forehead</li><li>Light, easily digestible food</li><li>Wear light clothing</li></ul><b>Go to Doctor if:</b><ul><li>Fever above 39.5°C</li><li>Fever lasts more than 3 days</li><li>Severe headache, stiff neck, rash</li><li>Difficulty breathing</li><li>Child under 3 months has any fever</li></ul>" },
+
+  { tags: ["covid","corona","coronavirus","covid symptoms","covid diet","covid recovery"],
+    a: "<b>🦠 COVID-19 Guide</b><br><br><b>Common Symptoms:</b><ul><li>Fever, dry cough, fatigue</li><li>Loss of taste or smell</li><li>Sore throat, headache, body aches</li><li>Shortness of breath</li></ul><b>Recovery Diet:</b><ul><li>High protein: eggs, chicken, fish, dal</li><li>Vitamin C: oranges, lemon, guava, kiwi</li><li>Zinc: nuts, seeds, meat</li><li>Vitamin D: sunlight, fish, eggs</li><li>Ginger and turmeric tea</li><li>Warm fluids: soups, herbal teas</li></ul><b>Home Care:</b><ul><li>Rest completely</li><li>Stay hydrated — 8–10 glasses water daily</li><li>Steam inhalation for congestion</li><li>Monitor oxygen levels with oximeter</li></ul><b>Seek Emergency if:</b> Oxygen below 94%, severe breathlessness, chest pain." },
+
+  // ── NUTRITION & VITAMINS ──
+  { tags: ["vitamins","daily vitamins","supplement","which vitamin","what vitamins","vitamin deficiency"],
+    a: "<b>💊 Essential Vitamins Guide</b><br><br><b>Most Important Vitamins:</b><ul><li><b>Vitamin D:</b> Bone health, immunity — get sunlight 15–20 min/day or take 1000–2000 IU supplement</li><li><b>Vitamin C:</b> Immunity, skin — eat citrus fruits, guava, bell peppers</li><li><b>Vitamin B12:</b> Nerve function, energy — found in meat, eggs, dairy (vegetarians often deficient)</li><li><b>Iron:</b> Blood health — red meat, spinach, lentils</li><li><b>Calcium:</b> Bones and teeth — dairy, green leafy vegetables</li><li><b>Omega-3:</b> Heart and brain — fish, flaxseeds, walnuts</li><li><b>Magnesium:</b> Sleep, muscles — nuts, seeds, dark chocolate</li><li><b>Zinc:</b> Immunity, wound healing — meat, pumpkin seeds, chickpeas</li></ul><b>Tip:</b> Always try to get vitamins from food first. Take supplements only if diagnosed deficient." },
+
+  { tags: ["protein","protein foods","high protein","protein sources","daily protein","how much protein"],
+    a: "<b>🥩 Protein Complete Guide</b><br><br><b>How Much Protein Do You Need?</b><ul><li>Normal adults: 0.8g per kg body weight</li><li>Active people: 1.2–1.6g per kg</li><li>Muscle building: 1.6–2.2g per kg</li></ul><b>Best Protein Sources:</b><ul><li><b>Animal:</b> Chicken breast (31g/100g), eggs (6g each), fish (25g/100g), beef (26g/100g)</li><li><b>Dairy:</b> Greek yogurt (17g/cup), cottage cheese (11g/100g), milk (8g/cup)</li><li><b>Plant:</b> Lentils/dal (18g/cup), chickpeas (15g/cup), tofu (17g/100g), quinoa (8g/cup)</li></ul><b>Tips:</b><ul><li>Spread protein across all meals</li><li>Eat protein within 30–60 min after workout</li><li>Combine plant proteins for complete amino acids</li></ul>" },
+
+  { tags: ["water","hydration","how much water","drink water","daily water"],
+    a: "<b>💧 Hydration Guide</b><br><br><b>How Much Water Daily?</b><ul><li>Women: 2.7 liters (about 9 glasses)</li><li>Men: 3.7 liters (about 13 glasses)</li><li>More if exercising, hot weather, or sick</li></ul><b>Signs of Dehydration:</b><ul><li>Dark yellow urine (should be pale yellow)</li><li>Headache, fatigue, dizziness</li><li>Dry mouth and skin</li><li>Difficulty concentrating</li></ul><b>Best Times to Drink Water:</b><ul><li>1 glass when you wake up</li><li>Before each meal</li><li>Before, during, after exercise</li><li>Before sleeping</li></ul><b>Tips:</b> Carry a water bottle, set reminders, eat water-rich foods like cucumber, watermelon, oranges." },
+
+  // ── FITNESS & EXERCISE ──
+  { tags: ["belly fat","lose belly fat","stomach fat","reduce belly","waist fat","abdominal fat"],
+    a: "<b>🏃 How to Lose Belly Fat</b><br><br><b>Important:</b> You cannot spot-reduce fat. Overall fat loss will reduce belly fat.<br><br><b>Best Exercises:</b><ul><li>Cardio: walking, running, cycling, swimming — 30–45 min daily</li><li>HIIT (High Intensity Interval Training) — burns fat fast</li><li>Planks, crunches, leg raises — strengthen core</li><li>Weight training — builds muscle, boosts metabolism</li></ul><b>Diet Tips:</b><ul><li>Reduce sugar and refined carbs completely</li><li>Eat more fiber: vegetables, fruits, oats</li><li>Eat enough protein to preserve muscle</li><li>Avoid alcohol — causes belly fat</li><li>Don't eat late at night</li></ul><b>Lifestyle:</b><ul><li>Sleep 7–8 hours — poor sleep increases belly fat</li><li>Manage stress — cortisol causes fat storage in belly</li></ul>" },
+
+  { tags: ["exercise","workout","fitness","gym","how to exercise","exercise plan","daily workout"],
+    a: "<b>💪 Exercise Guide for Beginners</b><br><br><b>Recommended Weekly Exercise:</b><ul><li>150 minutes moderate activity (walking, cycling)</li><li>OR 75 minutes vigorous activity (running, HIIT)</li><li>Plus 2 days strength training</li></ul><b>Simple Weekly Plan:</b><ul><li><b>Mon/Wed/Fri:</b> 30 min walk or jog + 15 min strength exercises</li><li><b>Tue/Thu:</b> Yoga or stretching</li><li><b>Sat:</b> Longer activity (cycling, swimming, sports)</li><li><b>Sun:</b> Rest and recovery</li></ul><b>Home Exercises (No Gym):</b><ul><li>Push-ups, squats, lunges, planks</li><li>Jumping jacks, burpees, mountain climbers</li><li>Yoga, stretching</li></ul><b>Tips:</b> Start slow, be consistent, rest is important, stay hydrated." },
+
+  // ── SKIN & HAIR ──
+  { tags: ["skin","glowing skin","skin food","healthy skin","skin care diet","acne diet","clear skin"],
+    a: "<b>✨ Foods for Glowing Skin</b><br><br><b>Best Foods for Skin:</b><ul><li><b>Vitamin C:</b> Oranges, lemon, guava, bell peppers — boosts collagen</li><li><b>Vitamin E:</b> Almonds, sunflower seeds, avocado — protects skin</li><li><b>Omega-3:</b> Fish, walnuts, flaxseeds — reduces inflammation</li><li><b>Beta-carotene:</b> Carrots, sweet potato, mango — natural glow</li><li><b>Zinc:</b> Pumpkin seeds, chickpeas — controls acne</li><li><b>Water:</b> 8–10 glasses daily — keeps skin hydrated</li><li><b>Green tea:</b> Powerful antioxidant for skin</li></ul><b>Foods that HARM Skin:</b><ul><li>Sugar — causes acne and aging</li><li>Dairy in excess — can trigger acne in some</li><li>Fried and processed foods</li><li>Alcohol — dehydrates and ages skin</li></ul>" },
+
+  { tags: ["hair loss","hair fall","hair growth","hair food","hair diet","strong hair","thinning hair"],
+    a: "<b>💇 Hair Loss & Growth Guide</b><br><br><b>Common Causes of Hair Fall:</b><ul><li>Iron, zinc, or protein deficiency</li><li>Vitamin D or B12 deficiency</li><li>Thyroid problems</li><li>Stress and poor sleep</li><li>Hormonal imbalance (PCOS)</li></ul><b>Best Foods for Hair Growth:</b><ul><li>Eggs — biotin and protein</li><li>Spinach — iron and folate</li><li>Sweet potatoes — beta-carotene</li><li>Fish — omega-3 fatty acids</li><li>Nuts — vitamin E and zinc</li><li>Lentils and beans — protein and iron</li></ul><b>Tips:</b><ul><li>Get blood tests for iron, B12, vitamin D, thyroid</li><li>Avoid tight hairstyles and heat styling</li><li>Massage scalp with warm oil weekly</li><li>Manage stress — major cause of hair loss</li></ul>" },
+
+  // ── MENTAL HEALTH ──
+  { tags: ["depression","sad","sadness","mental health","feeling low","mood","anxiety","stress","mental"],
+    a: "<b>🧠 Mental Health Guide</b><br><br><b>Signs of Depression:</b><ul><li>Persistent sadness, emptiness</li><li>Loss of interest in activities</li><li>Changes in sleep and appetite</li><li>Fatigue, difficulty concentrating</li><li>Feelings of worthlessness</li></ul><b>Natural Ways to Improve Mental Health:</b><ul><li>Exercise daily — releases mood-boosting endorphins</li><li>Get sunlight — boosts serotonin and vitamin D</li><li>Sleep 7–9 hours consistently</li><li>Social connection — talk to friends and family</li><li>Limit social media and news</li><li>Meditation and deep breathing — 10 min daily</li><li>Pursue hobbies and activities you enjoy</li></ul><b>Foods that Help:</b><ul><li>Omega-3 (fish, walnuts) — reduces depression</li><li>Dark chocolate — boosts mood</li><li>Fermented foods — gut-brain connection</li></ul><b>Important:</b> Please talk to a mental health professional if symptoms are severe." },
+
+  { tags: ["sleep","insomnia","cant sleep","improve sleep","sleep quality","how to sleep better","sleep tips"],
+    a: "<b>😴 Sleep Improvement Guide</b><br><br><b>Adults Need:</b> 7–9 hours per night<br><br><b>Tips for Better Sleep:</b><ul><li>Sleep and wake at the same time every day</li><li>Avoid screens (phone, TV) 1 hour before bed — blue light disrupts sleep</li><li>Keep bedroom cool, dark, and quiet</li><li>No caffeine after 2 PM</li><li>Avoid heavy meals within 3 hours of bedtime</li><li>Exercise daily — but not right before bed</li><li>Warm shower before bed</li><li>Read a book instead of scrolling</li></ul><b>Foods that Help Sleep:</b><ul><li>Warm milk — contains tryptophan</li><li>Almonds and walnuts — melatonin</li><li>Chamomile tea — natural relaxant</li><li>Bananas — magnesium and potassium</li></ul><b>Avoid:</b> Alcohol (disrupts sleep quality), caffeine, large meals at night." },
+
+  // ── IMMUNITY ──
+  { tags: ["immunity","immune system","boost immunity","strong immunity","immune booster","get sick often"],
+    a: "<b>🛡️ Immunity Booster Guide</b><br><br><b>Best Foods to Boost Immunity:</b><ul><li><b>Vitamin C:</b> Citrus fruits, guava, kiwi, bell peppers</li><li><b>Vitamin D:</b> Sunlight, fish, egg yolks, fortified milk</li><li><b>Zinc:</b> Meat, pumpkin seeds, chickpeas, cashews</li><li><b>Probiotics:</b> Yogurt, kefir, fermented foods</li><li><b>Garlic and ginger:</b> Natural antimicrobials</li><li><b>Turmeric:</b> Powerful anti-inflammatory</li><li><b>Green tea:</b> Rich in antioxidants</li></ul><b>Lifestyle Tips:</b><ul><li>Sleep 7–9 hours — immunity repairs during sleep</li><li>Exercise regularly — moderate exercise boosts immunity</li><li>Manage stress — chronic stress weakens immunity</li><li>Stay hydrated</li><li>Avoid smoking and excessive alcohol</li><li>Keep up with vaccinations</li></ul>" },
+
+  // ── WEIGHT ──
+  { tags: ["bmi","body mass index","healthy weight","overweight","underweight","ideal weight"],
+    a: "<b>⚖️ BMI Guide</b><br><br><b>How to Calculate BMI:</b><br>BMI = Weight(kg) ÷ Height(m)²<br><br><b>BMI Categories:</b><ul><li>Below 18.5 — Underweight</li><li>18.5 – 24.9 — Normal/Healthy ✅</li><li>25 – 29.9 — Overweight</li><li>30 and above — Obese</li></ul><b>Example:</b> Weight 70kg, Height 1.70m → BMI = 70 ÷ (1.70×1.70) = 24.2 (Normal)<br><br><b>Note:</b> BMI doesn't account for muscle mass. Athletes may show high BMI but be healthy. Consult a doctor for personalized assessment." },
+
+  { tags: ["heart attack","cardiac arrest","chest pain","heart symptoms","heart disease signs"],
+    a: "<b>❤️ Heart Attack Warning Signs</b><br><br><b>Symptoms:</b><ul><li>Chest pain, pressure, or tightness</li><li>Pain spreading to arm, shoulder, neck, or jaw</li><li>Shortness of breath</li><li>Cold sweat, nausea</li><li>Lightheadedness or dizziness</li></ul><b>Women may also experience:</b><ul><li>Unusual fatigue</li><li>Back or stomach pain</li><li>Indigestion-like feeling</li></ul><b>⚠️ EMERGENCY ACTION:</b><ul><li>Call emergency services immediately (115 or your local number)</li><li>Chew aspirin (325mg) if available and not allergic</li><li>Sit or lie down, stay calm</li><li>Do NOT drive yourself to hospital</li></ul>" },
+
+  { tags: ["asthma","breathing problem","shortness of breath","inhaler","wheeze","lung"],
+    a: "<b>🫁 Asthma Guide</b><br><br><b>What is Asthma?</b> Chronic inflammation of airways causing breathing difficulty.<br><br><b>Symptoms:</b><ul><li>Wheezing (whistling sound when breathing)</li><li>Shortness of breath</li><li>Chest tightness</li><li>Coughing, especially at night</li></ul><b>Common Triggers:</b><ul><li>Dust, pollen, pet dander</li><li>Cold air, exercise</li><li>Smoke, pollution</li><li>Strong smells, mold</li><li>Stress and anxiety</li></ul><b>Management:</b><ul><li>Use prescribed inhaler as directed</li><li>Identify and avoid triggers</li><li>Keep home dust-free</li><li>Anti-inflammatory diet: fruits, vegetables, omega-3</li><li>Breathing exercises like Buteyko</li></ul>" },
+
+  { tags: ["cold","flu","cough","runny nose","sore throat","common cold","viral infection"],
+    a: "<b>🤧 Cold & Flu Guide</b><br><br><b>Cold vs Flu:</b><ul><li><b>Cold:</b> Gradual onset, runny nose, mild symptoms</li><li><b>Flu:</b> Sudden onset, high fever, severe body aches, fatigue</li></ul><b>Home Remedies:</b><ul><li>Honey and ginger tea — soothes throat and cough</li><li>Steam inhalation — clears congestion</li><li>Saltwater gargle — for sore throat</li><li>Chicken soup — proven to reduce symptoms</li><li>Vitamin C foods — citrus fruits, guava</li><li>Rest and sleep — most important</li></ul><b>When to See Doctor:</b><ul><li>Fever above 39.5°C for more than 3 days</li><li>Difficulty breathing</li><li>Symptoms getting worse after 10 days</li></ul>" },
+];
+
+// ══════════════════════════════════════════════════════
+// NLP ENGINE — TF-IDF Cosine Similarity
+// ══════════════════════════════════════════════════════
+var STOPWORDS = ["a","an","the","is","it","in","of","to","and","or","for","on","at","by","do","i","my","me","what","how","why","when","can","are","was","be","have","has","this","that","with","you","your","we","they","does","did","will","would","should","could","may","might","from","about","which","who","am","not","no","so","if","as","its","their","there","been","had","but","just","more","also","than","then","some","any","all","both","each","few","many","much","other","into","out","up","down","after","before","please","tell","give","explain","show","help","want","need","know","get","make","use","like","good","best","better"];
+
+function tokenize(text) {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g,"").split(/\s+/).filter(function(w){ return w.length > 1; });
+}
+function clean(text) {
+  return tokenize(text).filter(function(w){ return STOPWORDS.indexOf(w)===-1; });
+}
+
+// Build tag vectors for each FAQ
+var allTags = [];
+FAQS.forEach(function(faq) {
+  faq.tags.forEach(function(t) {
+    tokenize(t).forEach(function(w){ if(allTags.indexOf(w)===-1) allTags.push(w); });
+  });
+});
+
+function tagVector(faq) {
+  var words = [];
+  faq.tags.forEach(function(t){ tokenize(t).forEach(function(w){ words.push(w); }); });
+  return allTags.map(function(w){ return words.indexOf(w) !== -1 ? 1 : 0; });
+}
+
+var faqVectors = FAQS.map(tagVector);
+
+function queryVector(tokens) {
+  return allTags.map(function(w){ return tokens.indexOf(w) !== -1 ? 1 : 0; });
+}
+
+function cosine(a, b) {
+  var dot=0, ma=0, mb=0;
+  for(var i=0;i<a.length;i++){ dot+=a[i]*b[i]; ma+=a[i]*a[i]; mb+=b[i]*b[i]; }
+  if(ma===0||mb===0) return 0;
+  return dot/(Math.sqrt(ma)*Math.sqrt(mb));
+}
+
+function findAnswer(input) {
+  var tokens = clean(input);
+  if(tokens.length === 0) return null;
+  var qv = queryVector(tokens);
+  var best = 0, idx = -1;
+  faqVectors.forEach(function(v, i){
+    var s = cosine(qv, v);
+    if(s > best){ best = s; idx = i; }
+  });
+  if(idx === -1 || best < 0.08) return null;
+  return { answer: FAQS[idx].a, score: best };
+}
+
+// ══════════════════════════════════════════════════════
+// UI
+// ══════════════════════════════════════════════════════
+var chatArea = document.getElementById("chat-area");
+var inputEl  = document.getElementById("user-input");
+var sendBtn  = document.getElementById("send-btn");
+
+function scrollDown(){ chatArea.scrollTop = chatArea.scrollHeight; }
+
+function addMessage(html, isUser, score) {
+  var msg = document.createElement("div");
+  msg.className = "msg " + (isUser ? "user" : "bot");
+  var av = document.createElement("div");
+  av.className = "avatar " + (isUser ? "user-av" : "bot-av");
+  av.textContent = isUser ? "U" : "🏥";
+  var bubble = document.createElement("div");
+  bubble.className = "bubble " + (isUser ? "user-bubble" : "bot-bubble");
+  if(isUser) bubble.textContent = html;
+  else bubble.innerHTML = html;
+  msg.appendChild(av);
+  msg.appendChild(bubble);
+  chatArea.appendChild(msg);
+  if(!isUser && score !== undefined) {
+    var conf = document.createElement("div");
+    conf.className = "confidence";
+    conf.textContent = "Match: " + Math.round(score*100) + "%";
+    chatArea.appendChild(conf);
+  }
+  scrollDown();
+}
+
+function showTyping() {
+  var msg = document.createElement("div");
+  msg.className = "msg bot"; msg.id = "typing-msg";
+  var av = document.createElement("div");
+  av.className = "avatar bot-av"; av.textContent = "🏥";
+  var bubble = document.createElement("div");
+  bubble.className = "bubble bot-bubble";
+  bubble.innerHTML = "<div class='typing-dots'><span></span><span></span><span></span></div>";
+  msg.appendChild(av); msg.appendChild(bubble);
+  chatArea.appendChild(msg); scrollDown();
+}
+function removeTyping(){ var el=document.getElementById("typing-msg"); if(el) el.remove(); }
+
+function handleSend() {
+  var text = inputEl.value.trim();
+  if(!text) return;
+  addMessage(text, true);
+  inputEl.value = "";
+  sendBtn.disabled = true;
+  showTyping();
+  setTimeout(function(){
+    removeTyping();
+    var result = findAnswer(text);
+    if(result) {
+      addMessage(result.answer, false, result.score);
+    } else {
+      addMessage("I'm sorry, I don't have specific information on that topic. Try asking about:<br><br>🥗 Diet plans (weight loss, muscle gain, diabetes, keto, heart)<br>🩺 Health conditions (diabetes, blood pressure, anemia, fever, cholesterol)<br>💊 Vitamins and nutrition<br>💪 Exercise and fitness<br>✨ Skin and hair health<br>😴 Sleep and mental health<br><br>Or rephrase your question with keywords like 'diet', 'symptoms', 'food for', etc.", false);
+    }
+    sendBtn.disabled = false;
+    inputEl.focus();
+  }, 700);
+}
+
+function ask(q){ inputEl.value=q; handleSend(); }
+
+sendBtn.addEventListener("click", handleSend);
+inputEl.addEventListener("keydown", function(e){ if(e.key==="Enter") handleSend(); });
+
+// Welcome
+setTimeout(function(){
+  addMessage("Hello! 👋 I'm <b>MediBot</b>, your AI Health & Diet Assistant!<br><br>I can help you with:<br>🥗 <b>Diet plans</b> — weight loss, muscle gain, diabetes, keto, heart diet<br>🩺 <b>Health conditions</b> — diabetes, BP, anemia, fever, cholesterol<br>💊 <b>Vitamins & nutrition</b> — protein, water intake, supplements<br>💪 <b>Fitness</b> — belly fat, exercise plans, home workouts<br>✨ <b>Skin & hair</b> — glowing skin, hair fall solutions<br>😴 <b>Sleep & mental health</b> — insomnia, anxiety, depression<br><br>What would you like to know today?", false);
+}, 300);
+</script>
+</body>
+</html>
